@@ -1,0 +1,67 @@
+Day 6 Runbook – Push Container to GCR & ECR
+Objectives
+Push container to GCR and ECR (create repos).
+
+Validate image pull permissions for service accounts/roles.
+
+Commit container build scripts.
+
+1
+Tag and Push to GCR
+Setup
+Prepare and upload the container image to Google Container Registry.
+
+Authenticate: gcloud auth configure-docker
+
+Tag image: docker tag my-iris:latest gcr.io/srevert-sri023/my-iris:latest
+
+Push: docker push gcr.io/srevert-sri023/my-iris:latest
+
+2
+Create ECR Repository
+Setup
+Provision an ECR repository to host the image.
+
+Run: aws ecr create-repository --repository-name my-iris --region ap-south-1
+
+Note repository URI from output
+
+3
+Tag and Push to ECR
+Recommended
+Upload the container image to Amazon ECR.
+
+Authenticate: aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com
+
+Tag image: docker tag my-iris:latest <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/my-iris:latest
+
+Push: docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/my-iris:latest
+
+4
+Validate Pull Permissions
+Check
+Ensure service accounts/roles can pull the image.
+
+GCP: Vertex SRE SA must have roles/storage.objectViewer
+
+AWS: SageMakerExecRole must have AmazonEC2ContainerRegistryReadOnly policy
+
+Test: docker pull using each role
+
+5
+Commit Build Scripts
+Finalize
+Add scripts to repo for reproducibility.
+
+Create scripts/push_gcr.sh and scripts/push_ecr.sh
+
+Include tagging + push commands
+
+Commit: git add scripts/ && git commit -m "Day 6: container push scripts" && git push
+
+✅ Outcome
+Container image pushed to both GCR and ECR.
+
+Service accounts/roles validated for pull access.
+
+Build + push scripts committed to repo for reproducibility.

@@ -1,0 +1,17 @@
+1. GCP – Vertex SRE Service Account
+Create service account
+
+gcloud iam service-accounts create vertex-sre \
+  --display-name="Vertex SRE Service Account" \
+  --project=srevert-sri023
+
+
+Assign minimal roles
+gcloud projects add-iam-policy-binding srevert-sri023 \
+  --member="serviceAccount:vertex-sre@srevert-sri023.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+gcloud projects add-iam-policy-binding srevert-sri023 \
+  --member="serviceAccount:vertex-sre@srevert-sri023.iam.gserviceaccount.com" \
+  --role="roles/storage.objectViewer"
+
+

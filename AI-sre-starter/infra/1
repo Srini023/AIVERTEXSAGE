@@ -1,0 +1,15 @@
+Store sensitive values in a vault (e.g., HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager).
+
+Document:
+
+GCP Project ID: srevert-sri023
+
+GCP Billing Account: 019DFA-092682-0EC841
+
+AWS Account ID: <your AWS account ID>
+
+Service Account keys / IAM role ARNs
+
+Never commit secrets to Git.
+
+Add vault usage notes in SECURITY.md.

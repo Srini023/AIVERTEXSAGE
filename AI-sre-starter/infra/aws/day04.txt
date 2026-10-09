@@ -1,0 +1,38 @@
+2. AWS – Enable Services
+SageMaker: automatically available, ensure IAM role is ready.
+
+ECR: create repository if needed:
+aws ecr create-repository --repository-name srevert-repo --region ap-south-1
+
+CloudWatch: enabled by default, confirm logging policies attached.
+
+
+AWS (CLI setup)
+
+aws budgets create-budget \
+  --account-id <AWS_ACCOUNT_ID> \
+  --budget-name COSTCONTROL \
+  --budget-type COST \
+  --time-unit MONTHLY \
+  --budget-limit Amount=10,Unit=USD \
+  --time-period Start=2026-10-01T00:00:00Z,End=2026-12-31T00:00:00Z \
+  --notifications-with-subscribers file://budget-notifications.json
+
+
+budget-notifications.json
+[
+  {
+    "Notification": {
+      "NotificationType": "ACTUAL",
+      "ComparisonOperator": "GREATER_THAN",
+      "Threshold": 50,
+      "ThresholdType": "PERCENTAGE"
+    },
+    "Subscribers": [
+      { "SubscriptionType": "EMAIL", "Address": "your-email@example.com" }
+    ]
+  }
+]
+
+
+

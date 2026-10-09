@@ -1,0 +1,17 @@
+2. AWS – SageMaker Execution Role
+Create IAM role
+
+aws iam create-role \
+  --role-name SageMakerExecRole \
+  --assume-role-policy-document file://trust.json
+
+Minimal policies
+
+aws iam attach-role-policy \
+  --role-name SageMakerExecRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+
+aws iam attach-role-policy \
+  --role-name SageMakerExecRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
