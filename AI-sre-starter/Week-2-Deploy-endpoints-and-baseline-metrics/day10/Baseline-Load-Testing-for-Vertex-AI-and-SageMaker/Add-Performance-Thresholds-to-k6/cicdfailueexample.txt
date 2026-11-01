@@ -1,0 +1,15 @@
+If p95 exceeds the threshold:
+✗ vertex_latency
+  ↳ 95th percentile < 800ms
+    expected: true
+    received: false
+
+
+k6 exits with:
+
+exit code 99
+This automatically fails:
+
+Jenkins stage
+GitHub Actions job
+GitLab pipeline

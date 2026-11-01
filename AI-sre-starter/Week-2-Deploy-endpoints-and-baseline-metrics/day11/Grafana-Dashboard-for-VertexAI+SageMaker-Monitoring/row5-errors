@@ -1,0 +1,16 @@
+Error Breakdown
+Pie chart:
+4XX Errors
+5XX Errors
+Timeouts
+Connection Errors
+
+
+Top Failure Messages
+Table:
+
+Timestamp
+Error Type
+Count
+
+

@@ -1,0 +1,54 @@
+Vertex AI
+
+vertex_latency: [
+  'p(50)<300',
+  'p(95)<800',
+  'p(99)<1500'
+]
+
+
+SageMaker
+sagemaker_latency: [
+  'p(50)<400',
+  'p(95)<1000',
+  'p(99)<2000'
+]
+
+Reliability
+http_req_failed: [
+  'rate<0.01'
+]
+
+checks: [
+  'rate>0.99'
+]
+
+#Above all should be edited in Javascript
+
+CI/CD Gate Policy
+Plain Text
+p50 <= Target
+p95 <= SLA
+p99 <= Upper Bound
+Error Rate < 1%
+Success Rate > 99%
+
+Deployment Outcome
+PASS:
+  Promote Artifact
+
+FAIL:
+  Trigger Rollback
+  Run Rollback Verification
+  Open Incident Ticket
+
+
+Day 10 Final Acceptance50 VUs executed for 2 minutes
+ p50 threshold enforced
+ p95 threshold enforced
+ p99 threshold enforced
+ Error rate threshold enforced
+ Success rate threshold enforced
+ Pipeline fails automatically on regression
+ Rollback triggered automatically on threshold violation
+

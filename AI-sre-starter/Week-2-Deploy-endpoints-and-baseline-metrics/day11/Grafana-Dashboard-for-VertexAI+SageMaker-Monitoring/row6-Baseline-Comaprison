@@ -1,0 +1,24 @@
+Current vs Baseline P95
+
+Visualization:
+Visualization:
+Current P95
+
+Baseline P95
+
+Deviation %
+
+Formula:
+Deviation =
+(Current - Baseline)
+/ Baseline * 100
+
+
+Thresholds:
+Green <= 10%
+
+Yellow <= 20%
+
+Red > 20%
+
+

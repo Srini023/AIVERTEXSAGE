@@ -1,0 +1,17 @@
+{
+  "vertex": {
+    "cpu_avg": 42,
+    "memory_avg": 58,
+    "gpu_avg": 0,
+    "replicas": 1,
+    "p95_latency_ms": 820
+  },
+
+  "sagemaker": {
+    "cpu_avg": 47,
+    "memory_avg": 61,
+    "gpu_avg": 0,
+    "instances": 1,
+    "p95_latency_ms": 910
+  }
+}

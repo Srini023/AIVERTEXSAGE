@@ -1,0 +1,47 @@
+P95 Latency Alert
+
+Condition:
+
+P95 > 1000 ms
+
+Duration:
+5 minutes
+
+
+Alert:
+Severity:Warning
+
+
+Error Rate Alert
+Condition:
+
+Error Rate > 1%
+
+Alert:
+Severity: Critical
+
+
+CPU Alert
+Condition:
+
+CPU > 85%
+
+For:
+10 minutes
+
+Memory Alert
+Condition:
+
+Memory > 90%
+
+For:
+5 minutes
+
+
+Replica Saturation Alert
+Current Replicas == Max Replicas
+
+Meaning:
+Scaling limit reached
+
+

@@ -1,0 +1,14 @@
+Objectives
+Create a load test script that can hit:
+Vertex AI Endpoint
+SageMaker Endpoint
+Run:
+50 Virtual Users (VUs)
+2-minute duration
+Capture:
+p50
+p95
+p99
+Error rate
+Requests/sec
+

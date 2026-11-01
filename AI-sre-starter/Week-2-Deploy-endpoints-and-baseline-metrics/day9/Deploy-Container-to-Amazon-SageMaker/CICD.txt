@@ -1,0 +1,276 @@
+CI/CD Validation Job (Jenkins / GitHub Actions / GitLab)
+
+The goal is to automatically fail the pipeline if:
+
+Endpoint deployment fails
+Endpoint never reaches InService
+Invocation tests fail
+CloudWatch logs contain errors
+4XX/5XX metrics exceed threshold
+Latency exceeds SLA
+
+Validation Flow
+Deploy Endpoint
+      │
+      ▼
+Wait for InService
+      │
+      ▼
+Prediction Test
+      │
+      ▼
+Latency Test
+      │
+      ▼
+CloudWatch Validation
+      │
+      ▼
+Metrics Validation
+      │
+      ▼
+PASS / FAIL
+
+
+Master Validation Script
+validate_sagemaker_endpoint.sh
+
+#!/bin/bash
+
+set -e
+
+ENDPOINT_NAME="$1"
+
+MAX_WAIT_MINUTES=30
+MAX_AVG_LATENCY_MS=1000
+
+echo "=================================="
+echo "SageMaker Deployment Validation"
+echo "=================================="
+
+################################################
+# Wait for Endpoint
+################################################
+
+echo "Checking endpoint status..."
+
+for ((i=1;i<=MAX_WAIT_MINUTES;i++))
+do
+    STATUS=$(aws sagemaker describe-endpoint \
+        --endpoint-name "$ENDPOINT_NAME" \
+        --query EndpointStatus \
+        --output text)
+
+    echo "Status: $STATUS"
+
+    if [ "$STATUS" = "InService" ]; then
+        echo "Endpoint ready."
+        break
+    fi
+
+    if [ "$STATUS" = "Failed" ]; then
+        echo "Deployment failed."
+        exit 1
+    fi
+
+    sleep 60
+done
+
+################################################
+# Invocation Test
+################################################
+
+echo ""
+echo "Running prediction test..."
+
+aws sagemaker-runtime invoke-endpoint \
+    --endpoint-name "$ENDPOINT_NAME" \
+    --content-type application/json \
+    --body fileb://request.json \
+    /tmp/response.json >/dev/null
+
+if [ ! -s /tmp/response.json ]; then
+    echo "Prediction test failed."
+    exit 1
+fi
+
+echo "Prediction test passed."
+
+################################################
+# Latency Test
+################################################
+
+echo ""
+echo "Running latency check..."
+
+RUNS=5
+TOTAL=0
+
+for ((i=1;i<=RUNS;i++))
+do
+    START=$(date +%s%3N)
+
+    aws sagemaker-runtime invoke-endpoint \
+      --endpoint-name "$ENDPOINT_NAME" \
+      --content-type application/json \
+      --body fileb://request.json \
+      /tmp/response.json >/dev/null
+
+    END=$(date +%s%3N)
+
+    LATENCY=$((END-START))
+
+    TOTAL=$((TOTAL + LATENCY))
+done
+
+AVG=$((TOTAL / RUNS))
+
+echo "Average Latency: ${AVG} ms"
+
+if [ "$AVG" -gt "$MAX_AVG_LATENCY_MS" ]; then
+    echo "Latency SLA violated."
+    exit 1
+fi
+
+################################################
+# CloudWatch Log Validation
+################################################
+
+echo ""
+echo "Checking CloudWatch logs..."
+
+LOG_GROUP="/aws/sagemaker/Endpoints/${ENDPOINT_NAME}"
+
+START_TIME=$((($(date +%s)-3600)*1000))
+
+ERRORS=$(aws logs filter-log-events \
+  --log-group-name "$LOG_GROUP" \
+  --start-time "$START_TIME" \
+  --query 'events[*].message' \
+  --output text | \
+  grep -Ei \
+  'error|exception|traceback|failed|failure|timeout|oom|outofmemory' \
+  | wc -l)
+
+echo "Errors Found: $ERRORS"
+
+if [ "$ERRORS" -gt 0 ]; then
+    echo "CloudWatch validation failed."
+    exit 1
+fi
+
+################################################
+# Endpoint Metrics Validation
+################################################
+
+echo ""
+echo "Checking CloudWatch metrics..."
+
+END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+START_TIME_METRIC=$(date -u -d "1 hour ago" +%Y-%m-%dT%H:%M:%SZ)
+
+FIVE_XX=$(aws cloudwatch get-metric-statistics \
+  --namespace AWS/SageMaker \
+  --metric-name Invocation5XXErrors \
+  --dimensions Name=EndpointName,Value=$ENDPOINT_NAME \
+  --statistics Sum \
+  --start-time "$START_TIME_METRIC" \
+  --end-time "$END_TIME" \
+  --period 3600 \
+  --query 'Datapoints[0].Sum' \
+  --output text)
+
+if [ "$FIVE_XX" != "None" ] && [ "$FIVE_XX" != "0" ]; then
+    echo "5XX errors detected."
+    exit 1
+fi
+
+################################################
+# Final Result
+################################################
+
+echo ""
+echo "=================================="
+echo "VALIDATION PASSED"
+echo "=================================="
+
+
+Jenkins Pipeline Stage
+stage('Validate SageMaker Endpoint') {
+    steps {
+        sh '''
+            chmod +x validate_sagemaker_endpoint.sh
+
+            ./validate_sagemaker_endpoint.sh \
+                my-endpoint
+        '''
+    }
+}
+
+
+GitHub Actions Job
+validate-endpoint:
+  runs-on: ubuntu-latest
+
+  steps:
+
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-east-1
+        role-to-assume: ${{ secrets.AWS_ROLE }}
+
+    - name: Validate Endpoint
+      run: |
+        chmod +x validate_sagemaker_endpoint.sh
+
+        ./validate_sagemaker_endpoint.sh my-endpoint
+
+
+GitLab CI Job
+validate_endpoint:
+  stage: validate
+
+  script:
+    - chmod +x validate_sagemaker_endpoint.sh
+    - ./validate_sagemaker_endpoint.sh my-endpoint
+
+
+CI/CD Gates
+Deployment Gate
+EndpointStatus == InService
+
+Functional Gate
+Prediction response generated
+
+Reliability Gate
+CloudWatch Errors == 0
+
+
+Availability Gate
+Invocation5XXErrors == 0
+
+Performance Gate
+Average latency < 1000 ms
+
+
+SRE Validation Report
+Deployment Status      PASS
+Endpoint Status        InService
+
+Prediction Test        PASS
+
+Average Latency        420 ms
+Max Allowed            1000 ms
+
+CloudWatch Errors      0
+Invocation 5XX         0
+
+Validation Result      PASS
+Promotion Approved     YES
+
+
+Production Promotion Rule
+
+Only allow promotion to the next environment (QA → Staging → Production) when all validation gates pass. This makes SageMaker endpoint verification a fully automated CI/CD quality gate, which is a strong SRE and MLOps practice

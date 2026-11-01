@@ -1,0 +1,32 @@
+{
+  "title": "ML Endpoint Operations",
+  "timezone": "browser",
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "title": "Endpoint Availability",
+      "type": "stat"
+    },
+    {
+      "title": "P95 Latency",
+      "type": "timeseries"
+    },
+    {
+      "title": "CPU Utilization",
+      "type": "timeseries"
+    },
+    {
+      "title": "Memory Utilization",
+      "type": "timeseries"
+    },
+    {
+      "title": "Replica Count",
+      "type": "timeseries"
+    },
+    {
+      "title": "Error Distribution",
+      "type": "piechart"
+    }
+  ]
+}

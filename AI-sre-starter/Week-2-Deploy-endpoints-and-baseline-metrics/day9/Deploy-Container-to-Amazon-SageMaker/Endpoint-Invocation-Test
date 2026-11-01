@@ -1,0 +1,209 @@
+Once the SageMaker endpoint reaches InService, validate that it can successfully process inference requests.
+
+Step 1: Create Test Payload
+
+{
+  "instances": [
+    {
+      "text": "Hello SageMaker"
+    }
+  ]
+}
+
+Step 2: Invoke the Endpoint
+aws sagemaker-runtime invoke-endpoint \
+  --endpoint-name my-endpoint \
+  --content-type application/json \
+  --body fileb://request.json \
+  response.json
+
+Successful output:
+
+JSON
+{
+  "ContentType": "application/json",
+  "InvokedProductionVariant": "AllTraffic"
+}
+
+
+Step 3: Inspect Prediction Response
+Step 3: Inspect Prediction Response
+cat response.json
+
+Example:
+{
+  "predictions": [
+    {
+      "label": "positive",
+      "score": 0.98
+    }
+  ]
+}
+
+
+Step 4: Capture Request Latency
+
+Measure end-to-end latency:
+
+time aws sagemaker-runtime invoke-endpoint \
+  --endpoint-name my-endpoint \
+  --content-type application/json \
+  --body fileb://request.json \
+  response.json
+
+Step 5: Automated Latency Validation
+latency_test.sh
+
+#!/bin/bash
+
+ENDPOINT_NAME="my-endpoint"
+REQUEST_FILE="request.json"
+
+RUNS=10
+
+MIN=999999
+MAX=0
+TOTAL=0
+
+for ((i=1;i<=RUNS;i++))
+do
+    START=$(date +%s%3N)
+
+    aws sagemaker-runtime invoke-endpoint \
+      --endpoint-name "$ENDPOINT_NAME" \
+      --content-type application/json \
+      --body fileb://"$REQUEST_FILE" \
+      /tmp/response.json >/dev/null
+
+    END=$(date +%s%3N)
+
+    LATENCY=$((END-START))
+
+    echo "Run $i : ${LATENCY} ms"
+
+    TOTAL=$((TOTAL + LATENCY))
+
+    if [ $LATENCY -lt $MIN ]; then
+        MIN=$LATENCY
+    fi
+
+    if [ $LATENCY -gt $MAX ]; then
+        MAX=$LATENCY
+    fi
+done
+
+AVG=$((TOTAL / RUNS))
+
+echo ""
+echo "Min Latency : ${MIN} ms"
+echo "Max Latency : ${MAX} ms"
+echo "Avg Latency : ${AVG} ms"
+
+Run:
+
+Shell
+chmod +x latency_test.sh
+./latency_test.sh
+
+Step 6: Negative Testing
+Invalid Payload
+
+Create:
+{
+  "invalid": "data"
+}
+
+
+invoke
+aws sagemaker-runtime invoke-endpoint \
+  --endpoint-name my-endpoint \
+  --content-type application/json \
+  --body fileb://invalid.json \
+  response.json
+
+Expected:
+
+ Validation error returned
+ Endpoint remains InService
+ No container crash
+
+Empty Payload
+{}
+
+Expected:
+4xx error
+No endpoint degradation
+
+Step 7: Validate Endpoint Health
+
+aws sagemaker describe-endpoint \
+  --endpoint-name my-endpoint \
+  --query EndpointStatus
+
+Expected:
+InService
+
+Checks:
+
+ Endpoint still InService after testing
+ No restart events
+ No model failures
+
+Step 8: Review CloudWatch Logs
+Find log groups:
+
+Find log groups:
+
+aws logs describe-log-groups \
+  --log-group-name-prefix /aws/sagemaker
+
+Recent events:
+aws logs tail \
+  /aws/sagemaker/Endpoints/my-endpoint \
+  --follow
+
+Verify:
+
+ No inference exceptions
+ No container crashes
+ No timeout issues
+ Successful invocation records present
+
+Endpoint Validation Checklist
+Functional Validation
+ Endpoint status = InService
+ Valid request succeeds
+ Response format correct
+ Prediction returned
+Reliability Validation
+ 10/10 successful invocations
+ No timeout errors
+ No container restarts
+ No CloudWatch errors
+Performance Validation
+ Average latency documented
+ Maximum latency documented
+ P95 latency measured (optional)
+ Meets target SLA
+
+SRE Validation Record
+Plain Text
+Endpoint Name : my-endpoint
+ 
+Endpoint Status : InService
+ 
+Test Payload : PASS
+Prediction Output : PASS
+ 
+Invalid Payload : PASS
+Empty Payload : PASS
+ 
+Min Latency : 320 ms
+Average Latency : 410 ms
+Max Latency : 580 ms
+ 
+CloudWatch Errors : 0
+ 
+Overall Status : READY FOR LOAD TESTING
+
+

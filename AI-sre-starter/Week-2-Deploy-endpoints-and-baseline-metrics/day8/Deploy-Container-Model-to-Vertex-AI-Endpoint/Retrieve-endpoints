@@ -1,0 +1,86 @@
+Endpoint Testing (Online Predictions)
+
+Once the model is deployed, validate that the endpoint accepts requests and returns predictions.
+
+1. Retrieve Endpoint Details
+gcloud ai endpoints describe ENDPOINT_ID \
+  --region=us-central1
+
+2. Create a Test Request Payload
+
+Example request.json:
+{
+  "instances": [
+    {
+      "text": "Hello Vertex AI"
+    }
+  ]
+}
+
+3. Send a Prediction Request
+gcloud ai endpoints predict ENDPOINT_ID \
+  --region=us-central1 \
+  --json-request=request.json
+
+Example response:
+{
+  "predictions": [
+    {
+      "label": "positive",
+      "score": 0.98
+    }
+  ]
+}
+
+4. Test Using REST API
+Obtain an access token:
+TOKEN=$(gcloud auth print-access-token)
+
+Invoke the endpoint:
+curl -X POST \
+-H "Authorization: Bearer $TOKEN" \
+-H "Content-Type: application/json" \
+https://us-central1-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/us-central1/endpoints/ENDPOINT_ID:predict \
+-d @request.json
+
+5. Measure Latency
+time gcloud ai endpoints predict ENDPOINT_ID \
+  --region=us-central1 \
+  --json-request=request.json
+
+6. Negative Testing
+Invalid Input
+JSON
+{
+  "invalid": "payload"
+}
+
+Empty Input
+{
+  "instances": []
+}
+
+7. Check Prediction Logs
+gcloud logging read \
+'resource.type="aiplatform.googleapis.com/Endpoint"' \
+--limit=50
+
+SRE Validation Record
+
+MODEL_ID        = <MODEL_ID>
+ENDPOINT_ID     = <ENDPOINT_ID>
+
+TEST_CASE_1     = Valid prediction
+STATUS          = PASS
+
+TEST_CASE_2     = Invalid payload
+STATUS          = PASS
+
+TEST_CASE_3     = Empty payload
+STATUS          = PASS
+
+AVERAGE_LATENCY = <ms>
+
+OVERALL_STATUS  = READY FOR PRODUCTION
+
+

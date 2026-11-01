@@ -1,0 +1,7 @@
+export GCP_TOKEN=$(gcloud auth print-access-token)
+
+k6 run \
+-e VERTEX_URL=$VERTEX_URL \
+-e SAGEMAKER_URL=$SAGEMAKER_URL \
+-e GCP_TOKEN=$GCP_TOKEN \
+multi_endpoint_test.js

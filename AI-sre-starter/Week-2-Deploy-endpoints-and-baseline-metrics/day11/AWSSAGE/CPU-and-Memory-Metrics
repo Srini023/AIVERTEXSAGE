@@ -1,0 +1,33 @@
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/SageMaker \
+  --metric-name CPUUtilization \
+  --dimensions Name=EndpointName,Value=my-endpoint \
+  --statistics Average Maximum \
+  --period 300 \
+  --start-time $(date -u -d "2 hours ago" +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+
+
+
+Memory Utilization
+
+If CloudWatch Agent is enabled:
+aws cloudwatch get-metric-statistics \
+  --namespace CWAgent \
+  --metric-name mem_used_percent \
+  --statistics Average
+
+GPU Utilization
+
+GPU-backed endpoints:
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/SageMaker \
+  --metric-name GPUUtilization \
+  --dimensions Name=EndpointName,Value=my-endpoint
+
+Instance Count
+aws sagemaker describe-endpoint \
+  --endpoint-name my-endpoint
+
+

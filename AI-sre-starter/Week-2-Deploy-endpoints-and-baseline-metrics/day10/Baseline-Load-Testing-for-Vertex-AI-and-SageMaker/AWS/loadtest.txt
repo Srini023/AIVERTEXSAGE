@@ -1,0 +1,6 @@
+Run:
+export ENDPOINT_URL=https://<api-gateway-url>/predict
+
+k6 run sagemaker_load_test.js
+
+

@@ -1,0 +1,274 @@
+Automatic Rollback on Validation Failure
+
+A production-grade CI/CD pipeline should automatically revert to the last known good endpoint configuration when validation fails.
+
+Rollback Strategy
+Deploy New Model
+        │
+        ▼
+Create New EndpointConfig
+        │
+        ▼
+Update Endpoint
+        │
+        ▼
+Run Validation Suite
+        │
+ ┌──────┴──────┐
+ │             │
+PASS         FAIL
+ │             │
+ ▼             ▼
+Promote    Rollback
+                │
+                ▼
+Restore Previous EndpointConfig
+
+
+
+Step 1: Capture Current Endpoint Configuration
+
+Before deployment, save the active configuration.
+
+CURRENT_CONFIG=$(aws sagemaker describe-endpoint \
+  --endpoint-name my-endpoint \
+  --query EndpointConfigName \
+  --output text)
+
+echo "$CURRENT_CONFIG" > previous_config.txt
+
+Example:
+my-endpoint-config-v12
+
+Step 2: Deploy New Configuration
+aws sagemaker update-endpoint \
+    --endpoint-name my-endpoint \
+    --endpoint-config-name my-endpoint-config-v13
+
+
+Step 3: Automated Rollback Function
+rollback_endpoint.sh
+#!/bin/bash
+
+ENDPOINT_NAME="$1"
+ROLLBACK_CONFIG="$2"
+
+echo "================================="
+echo "ROLLBACK INITIATED"
+echo "================================="
+
+echo "Endpoint: $ENDPOINT_NAME"
+echo "Rollback Config: $ROLLBACK_CONFIG"
+
+aws sagemaker update-endpoint \
+    --endpoint-name "$ENDPOINT_NAME" \
+    --endpoint-config-name "$ROLLBACK_CONFIG"
+
+echo "Waiting for rollback..."
+
+while true
+do
+    STATUS=$(aws sagemaker describe-endpoint \
+        --endpoint-name "$ENDPOINT_NAME" \
+        --query EndpointStatus \
+        --output text)
+
+    echo "Status: $STATUS"
+
+    if [ "$STATUS" = "InService" ]; then
+        echo "Rollback completed."
+        exit 0
+    fi
+
+    if [ "$STATUS" = "Failed" ]; then
+        echo "Rollback failed."
+        exit 1
+    fi
+
+    sleep 30
+done
+
+
+Step 4: Integrate Rollback Into Validation Pipeline
+
+Update validation script:
+ROLLBACK_CONFIG=$(cat previous_config.txt)
+
+rollback() {
+
+    echo "Validation failed."
+
+    ./rollback_endpoint.sh \
+       "$ENDPOINT_NAME" \
+       "$ROLLBACK_CONFIG"
+
+    exit 1
+}
+
+Example Validation Gate
+Instead of:
+if [ "$AVG" -gt "$MAX_AVG_LATENCY_MS" ]; then
+    exit 1
+fi
+
+Use:
+if [ "$AVG" -gt "$MAX_AVG_LATENCY_MS" ]; then
+    echo "Latency SLA violated."
+    rollback
+fi
+
+Similarly for:
+Prediction failure
+CloudWatch errors
+Endpoint status failure
+5XX errors
+Load test failure
+
+
+Enhanced Validation Flow
+rollback() {
+    ./rollback_endpoint.sh \
+       "$ENDPOINT_NAME" \
+       "$ROLLBACK_CONFIG"
+}
+
+
+Example:
+if [ "$ERRORS" -gt 0 ]; then
+    echo "CloudWatch errors detected."
+    rollback
+fi
+
+if [ "$FIVE_XX" != "0" ]; then
+    echo "5XX errors detected."
+    rollback
+fi
+
+if [ "$STATUS" = "Failed" ]; then
+    rollback
+fi
+
+Jenkins Pipeline Example
+pipeline {
+
+    stages {
+
+        stage('Deploy') {
+            steps {
+                sh './deploy.sh'
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                sh '''
+                    ./validate_sagemaker_endpoint.sh my-endpoint
+                '''
+            }
+        }
+    }
+
+    post {
+
+        failure {
+
+            sh '''
+                ./rollback_endpoint.sh \
+                  my-endpoint \
+                  $(cat previous_config.txt)
+            '''
+        }
+
+        success {
+            echo 'Deployment validated successfully.'
+        }
+    }
+}
+
+
+
+
+GitHub Actions Example
+- name: Validate Endpoint
+  run: |
+    ./validate_sagemaker_endpoint.sh my-endpoint
+
+- name: Rollback on Failure
+  if: failure()
+  run: |
+    ./rollback_endpoint.sh \
+      my-endpoint \
+      $(cat previous_config.txt)
+
+
+
+Recommended Production Pattern
+Use versioned endpoint configurations:
+my-endpoint-config-v10
+my-endpoint-config-v11
+my-endpoint-config-v12
+my-endpoint-config-v13
+
+Example deployment history:
+Current Production : v12
+
+Deploy Candidate   : v13
+
+Validation Failed
+
+Automatic Rollback
+
+Production Restored : v12
+
+
+
+Post-Rollback Verification
+aws sagemaker describe-endpoint \
+  --endpoint-name my-endpoint \
+  --query EndpointConfigName
+
+Expected:
+my-endpoint-config-v12
+
+Verify:
+aws sagemaker describe-endpoint \
+  --endpoint-name my-endpoint \
+  --query EndpointStatus
+
+
+
+Expected:
+InService
+
+
+SRE Rollback Checklist
+ Previous EndpointConfig captured
+ Validation failure detected
+ Automatic rollback executed
+ Endpoint returned to InService
+ Previous version restored
+ Rollback event logged
+ Alert generated
+ Deployment marked failed
+
+
+Production Promotion Policy
+Validation Pass
+    → Promote
+
+Validation Fail
+    → Automatic Rollback
+
+Rollback Fail
+    → Open Critical Incident
+
+
+SRE Best Practice
+
+Store deployment metadata in a release manifest:
+{
+  "deployment_id": "release-2026-11-01",
+  "current_config": "my-endpoint-config-v13",
+  "rollback_config": "my-endpoint-config-v12",
+  "endpoint": "my-endpoint"
+}

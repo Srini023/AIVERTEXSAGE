@@ -1,0 +1,21 @@
+Objective
+Push the container image to Amazon ECR.
+Create a SageMaker Model.
+Create an Endpoint Configuration.
+Create a SageMaker Endpoint.
+Monitor deployment until the endpoint reaches InService status.
+Capture deployment artifacts for SRE operations.
+
+Prerequisites
+AWS_REGION=us-east-1
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+IMAGE_NAME=my-model
+IMAGE_TAG=latest
+
+MODEL_NAME=my-model
+ENDPOINT_CONFIG=my-endpoint-config
+ENDPOINT_NAME=my-endpoint
+
+Verify AWS access:
+aws sts get-caller-identity

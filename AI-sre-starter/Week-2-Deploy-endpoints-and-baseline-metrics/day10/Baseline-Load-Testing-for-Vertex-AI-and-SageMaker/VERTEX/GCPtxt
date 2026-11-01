@@ -1,0 +1,10 @@
+Get token:
+export TOKEN=$(gcloud auth print-access-token)
+
+Set endpoint:
+export ENDPOINT_URL="https://us-central1-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/us-central1/endpoints/ENDPOINT_ID:predict"
+
+Execute:
+k6 run vertex_load_test.js
+
+

@@ -1,0 +1,147 @@
+run_test_matrix.sh
+#!/bin/bash
+
+set -e
+
+PROJECT_ID="<PROJECT_ID>"
+ENDPOINT_ID="<ENDPOINT_ID>"
+REGION="us-central1"
+
+TOKEN=$(gcloud auth print-access-token)
+
+ENDPOINT_URL="https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/endpoints/${ENDPOINT_ID}:predict"
+
+REQUEST_FILE="request.json"
+
+CONCURRENCY_LEVELS=(1 5 10 20 50 100)
+REQUESTS_PER_TEST=500
+
+OUTPUT_FILE="latency.csv"
+
+echo "concurrency,avg_ms,p95_ms,rps" > $OUTPUT_FILE
+
+for C in "${CONCURRENCY_LEVELS[@]}"
+do
+    echo "================================="
+    echo "Testing concurrency $C"
+    echo "================================="
+
+    hey \
+      -n $REQUESTS_PER_TEST \
+      -c $C \
+      -m POST \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -D $REQUEST_FILE \
+      "$ENDPOINT_URL" \
+      > hey_output.txt
+
+    AVG=$(grep "Average:" hey_output.txt | awk '{print $2}')
+    P95=$(grep "95%" hey_output.txt | awk '{print $3}')
+    RPS=$(grep "Requests/sec:" hey_output.txt | awk '{print $2}')
+
+    AVG_MS=$(echo "$AVG * 1000" | bc | awk '{printf "%.0f",$1}')
+    P95_MS=$(echo "$P95 * 1000" | bc | awk '{printf "%.0f",$1}')
+
+    echo "$C,$AVG_MS,$P95_MS,$RPS" >> $OUTPUT_FILE
+done
+
+echo ""
+echo "Benchmark complete."
+echo "Results written to $OUTPUT_FILE"
+
+cat $OUTPUT_FILE
+
+
+Generate Graph Automatically
+generate_report.py
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv("latency.csv")
+
+plt.figure(figsize=(12,6))
+
+plt.plot(
+    df["concurrency"],
+    df["avg_ms"],
+    marker="o",
+    linewidth=2,
+    label="Average Latency"
+)
+
+plt.plot(
+    df["concurrency"],
+    df["p95_ms"],
+    marker="s",
+    linewidth=2,
+    label="P95 Latency"
+)
+
+plt.title("Vertex AI Endpoint Latency vs Concurrency")
+plt.xlabel("Concurrency")
+plt.ylabel("Latency (ms)")
+plt.grid(True)
+plt.legend()
+
+plt.savefig("latency_vs_concurrency.png")
+
+plt.figure(figsize=(12,6))
+
+plt.plot(
+    df["concurrency"],
+    df["rps"],
+    marker="o",
+    linewidth=2,
+)
+
+plt.title("Vertex AI Throughput vs Concurrency")
+plt.xlabel("Concurrency")
+plt.ylabel("Requests Per Second")
+plt.grid(True)
+
+plt.savefig("throughput_vs_concurrency.png")
+
+print("Reports generated.")
+
+
+Run:
+python3 generate_report.py
+
+Generated artifacts:
+latency.csv
+latency_vs_concurrency.png
+throughput_vs_concurrency.png
+
+Full Benchmark Pipeline
+./run_test_matrix.sh
+
+python3 generate_report.py
+
+
+Outputs:
+✅ Benchmark results CSV
+✅ Latency vs Concurrency graph
+✅ Throughput vs Concurrency graph
+✅ P95 latency measurements
+✅ Requests/sec metrics
+
+
+SRE Decision Matrix
+Concurrency   Avg(ms)   P95(ms)   Action
+------------------------------------------------
+1-20          <500      <1000     Healthy
+20-50         500-1000  <2000     Monitor
+50-100        >1000     >3000     Scale Out
+100+          Rapid Growth        Saturated
+
+
+Production Artifact Checklist
+ Test matrix executed
+ CSV archived with build/release
+ Latency graph generated
+ Throughput graph generated
+ Saturation point documented
+ Recommended concurrency documented
+ Autoscaling threshold defined
+ Results attached to deployment runbook

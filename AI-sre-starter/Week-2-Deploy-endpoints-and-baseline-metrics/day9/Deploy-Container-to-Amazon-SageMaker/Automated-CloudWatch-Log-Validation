@@ -1,0 +1,217 @@
+After endpoint invocation and load testing, automatically scan CloudWatch logs for deployment and inference issues.
+
+Common Error Patterns to Detect
+
+Monitor for:
+ERROR
+Exception
+Traceback
+Failed
+Failure
+Timeout
+ModelError
+InternalServerError
+OutOfMemory
+Killed
+Container crashed
+Health check failed
+
+CloudWatch Health Check Script
+cloudwatch_log_check.sh
+#!/bin/bash
+
+ENDPOINT_NAME="my-endpoint"
+LOG_GROUP="/aws/sagemaker/Endpoints/${ENDPOINT_NAME}"
+
+START_TIME=$((($(date +%s)-3600)*1000))
+
+echo "Checking logs from last 60 minutes..."
+echo "Log Group: $LOG_GROUP"
+echo ""
+
+aws logs filter-log-events \
+    --log-group-name "$LOG_GROUP" \
+    --start-time "$START_TIME" \
+    --query 'events[*].message' \
+    --output text > endpoint_logs.txt
+
+ERROR_COUNT=$(grep -Ei \
+'error|exception|traceback|failed|failure|timeout|modelerror|internalservererror|oom|outofmemory|killed' \
+endpoint_logs.txt | wc -l)
+
+echo "Error Count: $ERROR_COUNT"
+
+if [ "$ERROR_COUNT" -eq 0 ]; then
+    echo "PASS: No critical errors detected."
+else
+    echo "FAIL: Errors detected."
+    echo ""
+    grep -Ein \
+    'error|exception|traceback|failed|failure|timeout|modelerror|internalservererror|oom|outofmemory|killed' \
+    endpoint_logs.txt
+fi
+
+Run:
+chmod +x cloudwatch_log_check.sh
+./cloudwatch_log_check.sh
+
+Endpoint Health Validation Script
+endpoint_health_check.sh
+
+#!/bin/bash
+
+ENDPOINT_NAME="my-endpoint"
+
+STATUS=$(aws sagemaker describe-endpoint \
+  --endpoint-name "$ENDPOINT_NAME" \
+  --query EndpointStatus \
+  --output text)
+
+echo "Endpoint Status: $STATUS"
+
+if [ "$STATUS" != "InService" ]; then
+    echo "FAIL: Endpoint unhealthy."
+    exit 1
+fi
+
+echo "PASS: Endpoint healthy."
+
+Generate Automated SRE Health Report
+sre_validation.sh
+
+#!/bin/bash
+
+ENDPOINT_NAME="my-endpoint"
+
+echo "=================================="
+echo "SageMaker Validation Report"
+echo "=================================="
+
+STATUS=$(aws sagemaker describe-endpoint \
+    --endpoint-name "$ENDPOINT_NAME" \
+    --query EndpointStatus \
+    --output text)
+
+echo "Endpoint Status : $STATUS"
+
+if [ "$STATUS" != "InService" ]; then
+    echo "Overall Status  : FAIL"
+    exit 1
+fi
+
+LOG_GROUP="/aws/sagemaker/Endpoints/${ENDPOINT_NAME}"
+
+START_TIME=$((($(date +%s)-3600)*1000))
+
+ERRORS=$(aws logs filter-log-events \
+    --log-group-name "$LOG_GROUP" \
+    --start-time "$START_TIME" \
+    --query 'events[*].message' \
+    --output text | \
+    grep -Ei \
+    'error|exception|traceback|failed|failure|timeout|modelerror|internalservererror' \
+    | wc -l)
+
+echo "Error Count     : $ERRORS"
+
+if [ "$ERRORS" -gt 0 ]; then
+    echo "Overall Status  : FAIL"
+    exit 1
+fi
+
+echo "Overall Status  : PASS"
+
+
+Enhanced Metrics Check
+
+Verify CloudWatch endpoint metrics:
+
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/SageMaker \
+  --metric-name Invocation4XXErrors \
+  --dimensions Name=EndpointName,Value=my-endpoint \
+  --statistics Sum \
+  --start-time $(date -u -d "1 hour ago" +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 3600
+
+Also check:
+Invocation4XXErrors
+Invocation5XXErrors
+ModelLatency
+OverheadLatency
+Invocations
+CPUUtilization (if enabled)
+MemoryUtilization (if enabled)
+
+SRE Acceptance Checklist
+Logs
+ No ERROR entries
+ No Exception entries
+ No container crashes
+ No health-check failures
+ No timeout errors
+Metrics
+ Invocation4XXErrors = 0
+ Invocation5XXErrors = 0
+ ModelLatency within SLA
+ Endpoint remains InService
+Endpoint
+ Prediction tests pass
+ Endpoint healthy after load testing
+ Logs clean during benchmark run
+
+
+
+SRE Acceptance Checklist
+Logs
+ No ERROR entries
+ No Exception entries
+ No container crashes
+ No health-check failures
+ No timeout errors
+Metrics
+ Invocation4XXErrors = 0
+ Invocation5XXErrors = 0
+ ModelLatency within SLA
+ Endpoint remains InService
+Endpoint
+ Prediction tests pass
+ Endpoint healthy after load testing
+ Logs clean during benchmark run
+
+
+Final Validation Report Template
+Endpoint Name      : my-endpoint
+Endpoint Status    : InService
+
+Prediction Tests   : PASS
+Load Tests         : PASS
+
+4XX Errors         : 0
+5XX Errors         : 0
+
+Log Errors         : 0
+Exceptions         : 0
+Timeouts           : 0
+
+Average Latency    : 410 ms
+P95 Latency        : 620 ms
+
+Overall Status     : PRODUCTION READY
+Validation Date    : <DATE>
+
+
+SRE Best Practice
+
+Combine the deployment wait script, endpoint invocation test, latency benchmark, and CloudWatch validation into a single CI/CD post-deployment stage. The deployment should automatically fail if:
+
+Endpoint status ≠ InService
+Any invocation test fails
+CloudWatch contains critical errors
+5XX errors are detected
+P95 latency exceeds your SLA threshold
+
+This gives you an end-to-end automated SageMaker deployment verification pipeline.
+
+

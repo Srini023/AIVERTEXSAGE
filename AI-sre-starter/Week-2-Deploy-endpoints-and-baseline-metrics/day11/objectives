@@ -1,0 +1,38 @@
+Capture baseline infrastructure metrics:
+CPU utilization
+Memory utilization
+GPU utilization (if applicable)
+Instance count
+Request rate
+Latency metrics
+
+Save graphs and metrics under:
+monitoring/
+├── vertex/
+├── sagemaker/
+├── reports/
+└── baselines/
+
+Directory Structure
+mkdir -p monitoring/{vertex,sagemaker,reports,baselines}
+
+Result:
+monitoring/
+
+├── vertex
+│   ├── cpu.png
+│   ├── memory.png
+│   ├── latency.png
+│   └── instances.png
+
+├── sagemaker
+│   ├── cpu.png
+│   ├── memory.png
+│   ├── latency.png
+│   └── instances.png
+
+├── reports
+│   └── baseline_report.md
+
+└── baselines
+    └── baseline_metrics.json

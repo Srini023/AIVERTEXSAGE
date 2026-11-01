@@ -1,0 +1,33 @@
+gcloud monitoring time-series list \
+  --filter='metric.type="aiplatform.googleapis.com/prediction/online/cpu/utilization"' \
+  --project=$PROJECT_ID
+
+Memory:
+gcloud monitoring time-series list \
+  --filter='metric.type="aiplatform.googleapis.com/prediction/online/memory/utilization"' \
+  --project=$PROJECT_ID
+
+Accelerator (GPU) Utilization
+
+If using GPUs:
+
+gcloud monitoring time-series list \
+  --filter='metric.type="aiplatform.googleapis.com/prediction/online/accelerator/duty_cycle"' \
+  --project=$PROJECT_ID
+
+Capture:
+GPU Utilization %
+
+
+Replica Count
+gcloud monitoring time-series list \
+  --filter='metric.type="aiplatform.googleapis.com/prediction/online/replica_count"' \
+  --project=$PROJECT_ID
+
+Record:
+Min Replicas
+Max Replicas
+Active Replicas
+
+
+

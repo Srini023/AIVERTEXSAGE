@@ -1,0 +1,151 @@
+9. Concurrent Load Testing (SRE Validation)
+
+Single-request latency testing is useful, but production endpoints must also handle concurrent requests. This test measures endpoint behavior under parallel load.
+
+Option 1: Simple Bash Concurrent Test
+
+Run 20 requests with 5 concurrent workers.
+#!/bin/bash
+
+ENDPOINT_ID="<ENDPOINT_ID>"
+REGION="us-central1"
+REQUEST_FILE="request.json"
+
+echo "Starting concurrent load test..."
+
+seq 20 | xargs -I{} -P 5 \
+bash -c '
+START=$(date +%s%3N)
+
+gcloud ai endpoints predict '"$ENDPOINT_ID"' \
+  --region='"$REGION"' \
+  --json-request='"$REQUEST_FILE"' \
+  >/dev/null 2>&1
+
+END=$(date +%s%3N)
+echo $((END-START))
+' > results.txt
+
+echo "Completed."
+
+echo "Total Requests: $(wc -l < results.txt)"
+echo "Average Latency: $(awk '{sum+=$1} END {print sum/NR}' results.txt) ms"
+echo "Min Latency: $(sort -n results.txt | head -1) ms"
+echo "Max Latency: $(sort -n results.txt | tail -1) ms"
+
+
+Option 2: REST API Load Test Using curl
+
+Avoids the overhead of repeatedly launching the gcloud CLI.
+
+export TOKEN=$(gcloud auth print-access-token)
+
+ENDPOINT_URL="https://us-central1-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/us-central1/endpoints/ENDPOINT_ID:predict"
+
+
+Execute:
+seq 50 | xargs -n1 -P10 -I{} \
+curl -s \
+-o /dev/null \
+-w "%{time_total}\n" \
+-X POST \
+-H "Authorization: Bearer $TOKEN" \
+-H "Content-Type: application/json" \
+-d @request.json \
+$ENDPOINT_URL > latency.txt
+
+Metrics:
+awk '
+{
+  sum+=$1
+  values[NR]=$1
+}
+END {
+  print "Requests:", NR
+  print "Average:", sum/NR, "seconds"
+}
+' latency.txt
+
+
+
+Option 3: Apache Bench (ab)
+Install:
+sudo apt install apache2-utils
+
+Test:
+ab -n 100 \
+-c 10 \
+-T application/json \
+-H "Authorization: Bearer $TOKEN" \
+-p request.json \
+https://us-central1-aiplatform.googleapis.com/v1/projects/PROJECT_ID/locations/us-central1/endpoints/ENDPOINT_ID:predict
+
+Parameters:
+-n = total requests
+-c = concurrent requests
+
+
+Option 4: Production-Grade Test with hey
+wget https://hey-release.s3.us-east-2.amazonaws.com/hey_linux_amd64
+chmod +x hey_linux_amd64
+sudo mv hey_linux_amd64 /usr/local/bin/hey
+
+Run:
+hey \
+-n 1000 \
+-c 20 \
+-m POST \
+-H "Authorization: Bearer $TOKEN" \
+-H "Content-Type: application/json" \
+-D request.json \
+"$ENDPOINT_URL"
+
+Recommended Load Levels
+Stage	Total Requests	ConcurrencySmoke Test	20	5
+Baseline	100	10
+Moderate Load	500	20
+Peak Load	1000	50
+Stress Test	5000+	100+
+
+
+Concurrent Load Test Checklist
+ All requests completed successfully
+ Success rate ≥ 99%
+ No 429 (rate limit) errors
+ No 5xx server errors
+ Endpoint remained healthy
+ CPU/Memory usage acceptable
+ P95 latency documented
+ Throughput (requests/sec) documented
+
+SRE Load Test Report Template
+Endpoint ID      : <ENDPOINT_ID>
+
+Total Requests   : 1000
+Concurrency      : 20
+
+Success Rate     : 100%
+Failed Requests  : 0
+
+Min Latency      : 220 ms
+Average Latency  : 390 ms
+P95 Latency      : 610 ms
+P99 Latency      : 820 ms
+Max Latency      : 920 ms
+
+Throughput       : 25 req/sec
+
+Endpoint Health  : PASS
+Production Ready : YES
+
+SRE Tip
+
+Run three separate tests:
+
+Cold Start Test (first request after deployment)
+Steady-State Test (10-20 concurrent users)
+Stress Test (increase concurrency until latency spikes or errors appear)
+
+The point where P95 latency grows rapidly or errors begin appearing is your practical scaling threshold and should be documented before production rollout.
+
+

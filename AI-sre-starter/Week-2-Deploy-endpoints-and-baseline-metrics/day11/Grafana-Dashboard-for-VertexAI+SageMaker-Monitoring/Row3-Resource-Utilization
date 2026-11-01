@@ -1,0 +1,34 @@
+CPU Utilization
+Average CPU %
+Maximum CPU %
+
+Thresholds:
+Green < 70
+
+Yellow 70-85
+
+Red > 85
+
+Memory Utilization
+Average Memory %
+
+Maximum Memory %
+
+Thresholds:
+Green < 75
+
+Yellow 75-90
+
+Red > 90
+
+GPU Utilization
+For GPU-backed inference:
+GPU Duty Cycle
+
+Thresholds:
+Green 40-80
+Yellow 80-90
+Red > 90
+
+
+

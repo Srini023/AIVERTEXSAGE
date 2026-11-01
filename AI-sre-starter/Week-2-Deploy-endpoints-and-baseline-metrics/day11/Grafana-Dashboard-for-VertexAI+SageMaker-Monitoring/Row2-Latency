@@ -1,0 +1,32 @@
+Time Series Panel
+p50
+p95
+p99
+
+Legend:
+Vertex P50
+Vertex P95
+Vertex P99
+
+SageMaker P50
+SageMaker P95
+SageMaker P99
+
+Thresholds:
+p50 < 300 ms
+
+p95 < 800 ms
+
+p99 < 1500 ms
+
+
+Requests Per Second
+Invocations/sec
+
+Visualization:
+Time Series
+
+Useful for:Traffic spikes
+Capacity analysis
+
+

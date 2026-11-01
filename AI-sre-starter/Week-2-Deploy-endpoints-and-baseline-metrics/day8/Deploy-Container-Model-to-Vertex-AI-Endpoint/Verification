@@ -1,0 +1,65 @@
+Deployment Verification Checklist (SRE)
+
+After uploading the model and creating the endpoint, verify the deployment before proceeding to inference testing.
+
+✅ Model Registration Verification
+gcloud ai models list --region=us-central1
+
+Inspect details:
+gcloud ai models describe MODEL_ID --region=us-central1
+
+✅ Endpoint Verification
+gcloud ai endpoints list --region=us-central1
+
+Inspect details:
+gcloud ai endpoints describe ENDPOINT_ID --region=us-central1
+
+✅ Model Deployment Verification
+
+Confirm model is attached to endpoint:
+
+gcloud ai endpoints describe ENDPOINT_ID \
+  --region=us-central1
+
+✅ Traffic Verification
+
+Verify traffic allocation:
+
+gcloud ai endpoints describe ENDPOINT_ID \
+  --region=us-central1 \
+  --format="yaml(trafficSplit)"
+
+✅ Logging Verification
+gcloud logging read \
+'resource.type="aiplatform.googleapis.com/Endpoint"' \
+--limit=20
+
+✅ Container Health Verification
+
+Common indicators of success:
+
+ Container starts successfully
+ Prediction server binds to expected port
+ Health checks pass
+ No crash-loop behavior
+ Resource allocation sufficient
+
+✅ Final Readiness Validation
+
+Document:
+
+PROJECT_ID   = <PROJECT_ID>
+REGION       = us-central1
+
+MODEL_NAME   = my-model
+MODEL_ID     = <MODEL_ID>
+
+ENDPOINT_NAME = my-endpoint
+ENDPOINT_ID   = <ENDPOINT_ID>
+
+DEPLOYMENT_STATUS = SUCCESS
+TRAFFIC_SPLIT     = 100%
+VERIFIED_BY       = <engineer>
+VERIFIED_DATE     = <date>
+
+

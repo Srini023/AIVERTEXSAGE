@@ -1,0 +1,79 @@
+8. Latency Test Script (SRE Validation)
+
+Use the following Bash script to send multiple prediction requests and calculate min, max, and average latency
+
+latency_test.sh
+#!/bin/bash
+
+ENDPOINT_ID="<ENDPOINT_ID>"
+REGION="us-central1"
+REQUEST_FILE="request.json"
+ITERATIONS=10
+
+total=0
+min=999999
+max=0
+
+echo "Starting latency test..."
+echo "Iterations: $ITERATIONS"
+echo "--------------------------------"
+
+for ((i=1; i<=ITERATIONS; i++)); do
+
+    start=$(date +%s%3N)
+
+    gcloud ai endpoints predict "$ENDPOINT_ID" \
+      --region="$REGION" \
+      --json-request="$REQUEST_FILE" \
+      > /dev/null 2>&1
+
+    end=$(date +%s%3N)
+
+    latency=$((end - start))
+
+    echo "Run $i: ${latency} ms"
+
+    total=$((total + latency))
+
+    if [ "$latency" -lt "$min" ]; then
+        min=$latency
+    fi
+
+    if [ "$latency" -gt "$max" ]; then
+        max=$latency
+    fi
+
+done
+
+avg=$((total / ITERATIONS))
+
+echo "--------------------------------"
+echo "Results"
+echo "Min Latency : ${min} ms"
+echo "Max Latency : ${max} ms"
+echo "Avg Latency : ${avg} ms"
+
+Make executable and run:
+chmod +x latency_test.sh
+./latency_test.sh
+
+
+Optional: P95 Latency Test
+for i in {1..50}; do
+    /usr/bin/time -f "%e" \
+    gcloud ai endpoints predict $ENDPOINT_ID \
+      --region=$REGION \
+      --json-request=request.json \
+      >/dev/null 2>&1
+done | sort -n
+
+SRE Acceptance Criteria
+Prediction Success Rate : 100%
+Min Latency             : <value>
+Average Latency         : <value>
+P95 Latency             : <value>
+Maximum Latency         : <value>
+
+Status                  : PASS
+
+SRE Tip: Run three rounds (cold start, warm-up, sustained load) and compare latency metrics. Cold-start latency is often higher than steady-state latency and should be documented separately.

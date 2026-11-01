@@ -1,0 +1,108 @@
+A latency-versus-concurrency graph helps identify:
+
+The endpoint's optimal operating range
+The point where queuing begins
+Saturation thresholds
+Scaling trigger points
+P95 degradation under load
+
+Step 1: Run Tests at Multiple Concurrency Levels
+
+Concurrency    Requests
+-----------    --------
+1              100
+5              100
+10             100
+20             100
+50             100
+100            100
+
+Using hey:
+hey -n 100 -c 1   ...
+hey -n 100 -c 5   ...
+hey -n 100 -c 10  ...
+hey -n 100 -c 20  ...
+hey -n 100 -c 50  ...
+hey -n 100 -c 100 ...
+
+Record results in latency.csv:
+concurrency,avg_latency_ms,p95_latency_ms,rps
+1,220,250,4
+5,260,310,18
+10,320,410,29
+20,410,610,43
+50,720,1200,61
+100,1550,3200,65
+
+Step 2: Generate the Plot
+plot_latency.py
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv("latency.csv")
+
+plt.figure(figsize=(10,6))
+
+plt.plot(
+    df["concurrency"],
+    df["avg_latency_ms"],
+    marker="o",
+    linewidth=2,
+    label="Average Latency"
+)
+
+plt.plot(
+    df["concurrency"],
+    df["p95_latency_ms"],
+    marker="s",
+    linewidth=2,
+    label="P95 Latency"
+)
+
+plt.xlabel("Concurrency")
+plt.ylabel("Latency (ms)")
+plt.title("Vertex AI Endpoint Performance")
+plt.grid(True)
+plt.legend()
+
+plt.tight_layout()
+plt.savefig("latency_vs_concurrency.png")
+plt.show()
+
+Run:
+python3 plot_latency.py
+
+Output:
+
+latency_vs_concurrency.png
+
+
+Advanced: Throughput vs Concurrency
+plt.figure(figsize=(10,6))
+
+plt.plot(
+    df["concurrency"],
+    df["rps"],
+    marker="o"
+)
+
+plt.xlabel("Concurrency")
+plt.ylabel("Requests per Second")
+plt.title("Throughput vs Concurrency")
+plt.grid(True)
+
+plt.savefig("throughput_vs_concurrency.png")
+
+When the curve flattens:
+Capacity reached.
+More users ≠ more throughput.
+
+
+SRE Capacity Planning Table
+Concurrency	Avg Latency	P95 Latency	RPS	Status1	220 ms	250 ms	4	Healthy
+5	260 ms	310 ms	18	Healthy
+10	320 ms	410 ms	29	Healthy
+20	410 ms	610 ms	43	Healthy
+50	720 ms	1200 ms	61	Watch
+100	1550 ms	3200 ms	65	Saturated

@@ -1,0 +1,19 @@
+$environment
+
+Values:
+- dev
+- qa
+- prod
+
+$provider
+
+Values:
+- vertex
+- sagemaker
+- all
+
+$endpoint
+
+Values:
+- endpoint1
+- endpoint2

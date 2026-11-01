@@ -1,0 +1,260 @@
+Rollback Verification Tests (SRE Validation)
+
+A rollback is only successful if the endpoint is both restored and functional. After automatic rollback completes, execute the following verification suite.
+
+
+1. Verify Endpoint Config Reverted
+
+Capture the active EndpointConfig:
+
+CURRENT_CONFIG=$(aws sagemaker describe-endpoint \
+  --endpoint-name my-endpoint \
+  --query EndpointConfigName \
+  --output text)
+
+echo "Current Config: $CURRENT_CONFIG"
+
+Compare against the expected rollback target:
+
+Shell
+
+EXPECTED_CONFIG=$(cat previous_config.txt)
+
+if [ "$CURRENT_CONFIG" != "$EXPECTED_CONFIG" ]; then
+    echo "FAIL: Rollback config mismatch"
+    exit 1
+fi
+
+echo "PASS: Correct config restored"
+
+Check
+ EndpointConfig matches rollback target
+ Failed configuration no longer active
+
+
+2. Verify Endpoint Returns to InService
+STATUS=$(aws sagemaker describe-endpoint \
+  --endpoint-name my-endpoint \
+  --query EndpointStatus \
+  --output text)
+
+echo "$STATUS"
+
+
+
+Expected:
+InService
+
+
+Check
+ Endpoint status = InService
+ No Failed state
+ No Updating state stuck
+
+
+3. Functional Prediction Test
+
+Use the same golden test payload used before deployment.
+aws sagemaker-runtime invoke-endpoint \
+  --endpoint-name my-endpoint \
+  --content-type application/json \
+  --body fileb://golden_request.json \
+  response.json
+
+Validate:
+Validate:
+jq . response.json
+
+Check
+ Prediction succeeds
+ Response not empty
+ JSON valid
+ Schema unchanged
+
+
+4. Golden Output Comparison
+
+Store a known-good response:
+{
+  "label": "positive"
+}
+
+
+Compare:
+jq -S . response.json > current.json
+jq -S . expected_response.json > expected.json
+
+diff expected.json current.json
+
+
+Check
+ Output matches expected baseline
+ No regression introduced
+
+
+5. Latency Verification
+Ensure rollback performance remains acceptable.
+
+for i in {1..5}
+do
+  START=$(date +%s%3N)
+
+  aws sagemaker-runtime invoke-endpoint \
+      --endpoint-name my-endpoint \
+      --content-type application/json \
+      --body fileb://golden_request.json \
+      /tmp/out.json >/dev/null
+
+  END=$(date +%s%3N)
+
+  echo "$((END-START))"
+done
+
+
+Acceptance:
+Average latency <= pre-deployment baseline + 20%
+
+Check
+ Latency within SLA
+ No excessive degradation
+
+6. CloudWatch Error Validation
+aws logs filter-log-events \
+  --log-group-name "/aws/sagemaker/Endpoints/my-endpoint" \
+  --start-time $((($(date +%s)-900)*1000))
+
+Search:
+grep -Ei \
+'error|exception|traceback|failure|timeout'
+
+Acceptance:
+0 critical errors
+
+Check
+ No exceptions
+ No model startup failures
+ No container crashes
+
+7. CloudWatch Metrics Validation
+4XX Errors
+
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/SageMaker \
+  --metric-name Invocation4XXErrors \
+  --dimensions Name=EndpointName,Value=my-endpoint \
+  --statistics Sum \
+  --period 300 \
+  --start-time $(date -u -d "15 minutes ago" +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+5XX Errors
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/SageMaker \
+  --metric-name Invocation5XXErrors \
+  --dimensions Name=EndpointName,Value=my-endpoint \
+  --statistics Sum \
+  --period 300 \
+  --start-time $(date -u -d "15 minutes ago" +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+
+8. Rollback Validation Script
+verify_rollback.sh
+
+#!/bin/bash
+
+set -e
+
+ENDPOINT_NAME="$1"
+EXPECTED_CONFIG=$(cat previous_config.txt)
+
+echo "Verifying rollback..."
+
+CURRENT_CONFIG=$(aws sagemaker describe-endpoint \
+    --endpoint-name "$ENDPOINT_NAME" \
+    --query EndpointConfigName \
+    --output text)
+
+STATUS=$(aws sagemaker describe-endpoint \
+    --endpoint-name "$ENDPOINT_NAME" \
+    --query EndpointStatus \
+    --output text)
+
+if [ "$CURRENT_CONFIG" != "$EXPECTED_CONFIG" ]; then
+    echo "FAIL: Incorrect endpoint config"
+    exit 1
+fi
+
+if [ "$STATUS" != "InService" ]; then
+    echo "FAIL: Endpoint not InService"
+    exit 1
+fi
+
+aws sagemaker-runtime invoke-endpoint \
+    --endpoint-name "$ENDPOINT_NAME" \
+    --content-type application/json \
+    --body fileb://golden_request.json \
+    /tmp/response.json >/dev/null
+
+if [ ! -s /tmp/response.json ]; then
+    echo "FAIL: Prediction test failed"
+    exit 1
+fi
+
+echo "PASS: Rollback verified"
+
+
+CI/CD Rollback Stage
+Jenkins
+
+post {
+    failure {
+        sh '''
+            ./rollback_endpoint.sh \
+              my-endpoint \
+              $(cat previous_config.txt)
+
+            ./verify_rollback.sh \
+              my-endpoint
+        '''
+    }
+}
+
+
+GitHub Actions
+- name: Rollback
+  if: failure()
+  run: |
+    ./rollback_endpoint.sh my-endpoint \
+      $(cat previous_config.txt)
+
+- name: Verify Rollback
+  if: failure()
+  run: |
+    ./verify_rollback.sh my-endpoint
+
+
+Rollback Acceptance Criteria
+ Previous EndpointConfig restored
+ EndpointStatus = InService
+ Golden prediction test passes
+ Output matches baseline
+ No CloudWatch errors
+ No 4XX errors
+ No 5XX errors
+ Latency within SLA
+ Rollback verification completed automatically
+
+
+SRE Production Rule
+Deployment Failure
+       ↓
+Automatic Rollback
+       ↓
+Rollback Verification
+       ↓
+PASS → Service Restored
+
+FAIL → Open P1 Incident
+
+

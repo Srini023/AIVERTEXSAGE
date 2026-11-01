@@ -1,0 +1,11 @@
+monitoring/
+
+├── grafana/
+│   ├── dashboards/
+│   │    └── ml-endpoints.json
+│   └── provisioning/
+│        └── dashboards.yaml
+│
+├── vertex/
+├── sagemaker/
+└── reports/

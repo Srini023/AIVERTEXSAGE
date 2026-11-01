@@ -1,0 +1,189 @@
+Step 1: Create ECR Repository
+
+aws ecr create-repository \
+  --repository-name $IMAGE_NAME
+
+List repositories:
+aws ecr describe-repositories
+
+Step 2: Authenticate Docker to ECR
+aws ecr get-login-password \
+  --region $AWS_REGION \
+| docker login \
+  --username AWS \
+  --password-stdin \
+  ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+Step 3: Tag Image
+Assume local image exists:
+docker images
+
+Tag it:
+docker tag \
+  $IMAGE_NAME:$IMAGE_TAG \
+  ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:$IMAGE_TAG
+
+Verify:
+docker images
+
+
+Step 4: Push Image to ECR
+docker push \
+${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:$IMAGE_TAG
+
+aws ecr list-images \
+  --repository-name $IMAGE_NAME
+
+Step 5: Create SageMaker Execution Role
+aws iam get-role \
+  --role-name SageMakerExecutionRole
+
+Capture:
+ROLE_ARN=arn:aws:iam::<account>:role/SageMakerExecutionRole
+
+
+Step 6: Create SageMaker Model
+aws sagemaker create-model \
+  --model-name $MODEL_NAME \
+  --execution-role-arn $ROLE_ARN \
+  --primary-container Image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+
+Describe:
+aws sagemaker describe-model \
+  --model-name $MODEL_NAME
+
+
+Step 7: Create Endpoint Configuration
+aws sagemaker create-endpoint-config \
+  --endpoint-config-name $ENDPOINT_CONFIG \
+  --production-variants '[
+    {
+      "VariantName":"AllTraffic",
+      "ModelName":"'"$MODEL_NAME"'",
+      "InitialInstanceCount":1,
+      "InstanceType":"ml.t2.medium",
+      "InitialVariantWeight":1
+    }
+  ]'
+
+
+Verify:
+aws sagemaker describe-endpoint-config \
+  --endpoint-config-name $ENDPOINT_CONFIG
+
+Step 8: Create Endpoint
+aws sagemaker create-endpoint \
+  --endpoint-name $ENDPOINT_NAME \
+  --endpoint-config-name $ENDPOINT_CONFIG
+
+Response:
+{
+  "EndpointArn": "arn:aws:sagemaker:..."
+}
+
+
+Step 9: Monitor Endpoint Creation
+Check status:
+aws sagemaker describe-endpoint \
+  --endpoint-name $ENDPOINT_NAME \
+  --query EndpointStatus
+
+Expected progression:
+Expected progression:
+Creating
+Updating
+InService
+
+
+Automated Status Validation Script
+wait_for_endpoint.sh
+
+#!/bin/bash
+
+ENDPOINT_NAME="my-endpoint"
+
+while true
+do
+    STATUS=$(aws sagemaker describe-endpoint \
+        --endpoint-name "$ENDPOINT_NAME" \
+        --query EndpointStatus \
+        --output text)
+
+    echo "$(date) - Status: $STATUS"
+
+    if [ "$STATUS" = "InService" ]; then
+        echo "Endpoint is ready."
+        exit 0
+    fi
+
+    if [ "$STATUS" = "Failed" ]; then
+        echo "Endpoint deployment failed."
+
+        aws sagemaker describe-endpoint \
+          --endpoint-name "$ENDPOINT_NAME"
+
+        exit 1
+    fi
+
+    sleep 30
+done
+
+Run:
+chmod +x wait_for_endpoint.sh
+./wait_for_endpoint.sh
+
+Deployment Verification Checklist
+ECR
+ Repository exists
+ Docker image pushed
+ Image visible in ECR
+SageMaker Model
+ Model created
+ Correct ECR image configured
+ IAM execution role attached
+Endpoint Configuration
+ EndpointConfig exists
+ Correct instance type selected
+ Variant configuration valid
+Endpoint
+ Endpoint created
+ Status reaches InService
+ No deployment failures
+
+
+Troubleshooting
+Check Endpoint Failure Reason
+aws sagemaker describe-endpoint \
+  --endpoint-name $ENDPOINT_NAME
+
+Look for:
+Look for:
+FailureReason
+
+Common causes:
+Container startup failure
+Missing inference script
+Insufficient IAM permissions
+Invalid image URI
+Health check failure
+Wrong port exposure
+
+SRE Artifact Tracking
+AWS Region           : us-east-1
+
+ECR Repository       : my-model
+Image URI            : <ECR_IMAGE_URI>
+
+Model Name           : my-model
+
+Endpoint Config      : my-endpoint-config
+
+Endpoint Name        : my-endpoint
+Endpoint Status      : InService
+
+Execution Role ARN   : <ROLE_ARN>
+
+Deployment Status    : SUCCESS
+Deployment Date      : <DATE>
+
+

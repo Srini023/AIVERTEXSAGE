@@ -1,0 +1,24 @@
+Stat Panel: Endpoint Availability
+
+Query:
+Success Rate %
+
+Thresholds:
+Green  >= 99.5
+Yellow >= 99
+Red    < 99
+
+Display:
+Display:
+
+Stat Panel: Error Rate
+4XX + 5XX
+
+Thresholds:
+Green < 0.5%
+
+Yellow < 1%
+
+Red >= 1%
+
+
