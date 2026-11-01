@@ -1,0 +1,43 @@
+Option 1: Reduce Endpoint to Minimum Replicas
+
+Min Replicas = 0 (if supported)
+
+or
+
+Min Replicas = 1
+Observe behavior after an idle period.
+
+Measure First Request
+START=$(date +%s%3N)
+
+gcloud ai endpoints predict ENDPOINT_ID \
+  --region=us-central1 \
+  --json-request=request.json \
+  >/tmp/response.json
+
+END=$(date +%s%3N)
+
+echo "Cold Start Latency: $((END-START)) ms"
+
+
+Measure Warm Requests
+
+for i in {1..5}
+do
+  START=$(date +%s%3N)
+
+  gcloud ai endpoints predict ENDPOINT_ID \
+    --region=us-central1 \
+    --json-request=request.json \
+    >/tmp/response.json
+
+  END=$(date +%s%3N)
+
+  echo "$((END-START))"
+done
+
+
+Calculate:
+Warm Avg Latency
+
+

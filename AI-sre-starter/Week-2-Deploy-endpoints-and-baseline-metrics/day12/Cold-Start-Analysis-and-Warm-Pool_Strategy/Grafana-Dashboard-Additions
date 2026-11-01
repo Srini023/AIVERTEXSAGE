@@ -1,0 +1,21 @@
+Add panels:
+
+Cold vs Warm Latency
+
+Cold Start Latency
+Warm Avg Latency
+Penalty %
+
+
+Replica Utilization
+Current Replicas
+Min Replicas
+Max Replicas
+
+Scale Events
+Scale Out
+Scale In
+New Container Starts
+
+
+

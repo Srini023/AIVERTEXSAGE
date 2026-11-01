@@ -1,0 +1,9 @@
+Objectives
+Create a minimal dashboard in:
+Google Cloud Monitoring (Vertex AI)
+AWS CloudWatch (SageMaker)
+Display:
+Latency
+Error Rate
+Create a temporary SLO alert:
+p99 latency > threshold

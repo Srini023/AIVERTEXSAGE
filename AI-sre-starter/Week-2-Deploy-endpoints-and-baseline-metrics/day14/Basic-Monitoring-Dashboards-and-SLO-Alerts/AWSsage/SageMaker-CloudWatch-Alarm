@@ -1,0 +1,20 @@
+Create p99 alarm:
+aws cloudwatch put-metric-alarm \
+  --alarm-name "SageMaker-P99-Latency" \
+  --namespace AWS/SageMaker \
+  --metric-name ModelLatency \
+  --dimensions Name=EndpointName,Value=my-endpoint \
+  --extended-statistic p99 \
+  --period 60 \
+  --evaluation-periods 5 \
+  --threshold 2000 \
+  --comparison-operator GreaterThanThreshold
+
+Meaning:Trigger alarm if:
+
+P99 > 2000 ms
+
+for 5 consecutive minutes
+
+
+

@@ -1,0 +1,34 @@
+Alert Condition
+
+P99 Latency > 2000ms
+For 5 minutes
+
+Configuration:
+Metric:
+aiplatform.googleapis.com/prediction/online/prediction_latencies
+
+Aggregator:
+99th percentile
+
+Alert:
+Severity: Warning
+
+
+Alert Policy Example
+vertex-p99-alert.yaml
+
+displayName: Vertex P99 Latency SLO
+
+conditions:
+- displayName: P99 > 2000 ms
+
+notificationChannels: []
+
+enabled: true
+
+
+Apply:
+gcloud alpha monitoring policies create \
+  --policy-from-file=vertex-p99-alert.yaml
+
+

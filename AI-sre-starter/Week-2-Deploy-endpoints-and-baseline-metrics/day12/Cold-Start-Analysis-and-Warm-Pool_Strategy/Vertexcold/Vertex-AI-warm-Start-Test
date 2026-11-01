@@ -1,0 +1,21 @@
+Vertex AI Recommendation
+Development
+
+Min Replicas = 0 or 1
+
+Benefits:
+
+Lowest cost
+Cold starts acceptable
+
+Production
+Min Replicas = 2
+Max Replicas = 10
+
+Benefits:
+
+Eliminates most cold starts
+Supports HA
+Handles traffic spikes
+
+

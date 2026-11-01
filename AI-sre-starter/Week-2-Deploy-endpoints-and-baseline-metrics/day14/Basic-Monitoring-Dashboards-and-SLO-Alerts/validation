@@ -1,0 +1,14 @@
+Generate load:
+k6 run multi_endpoint_test.js
+
+Verify:
+
+Cloud Monitoring
+ Latency graph updates
+ Error rate graph updates
+CloudWatch
+ ModelLatency visible
+ 4XX/5XX metrics visible
+Alerts
+ Alarm created successfully
+ Alarm state visible

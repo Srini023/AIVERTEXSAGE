@@ -1,0 +1,9 @@
+If cost is a concern:
+
+Schedule synthetic traffic.
+
+*/5 * * * * curl https://endpoint-url/predict
+
+Every:
+5 minutes
+Keeps containers warm.

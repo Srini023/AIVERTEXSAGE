@@ -1,0 +1,23 @@
+A cold start occurs when:
+
+Request Arrives
+      ↓
+No Active Serving Runtime
+      ↓
+Container Starts
+      ↓
+Model Loads
+      ↓
+Inference Runs
+      ↓
+Response Returned
+
+
+Common contributors:
+
+Container startup time
+Model loading time
+GPU initialization
+Dependency initialization
+Network attachment
+Autoscaling scale-out events

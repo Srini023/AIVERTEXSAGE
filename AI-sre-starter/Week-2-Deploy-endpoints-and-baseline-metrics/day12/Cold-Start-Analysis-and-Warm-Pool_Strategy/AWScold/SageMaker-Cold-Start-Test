@@ -1,0 +1,24 @@
+SageMaker real-time endpoints do not normally scale to zero, but cold-start-like behavior can be observed after:
+
+Endpoint update
+New deployment
+Instance replacement
+Scale-out event
+
+Measure After Deployment
+
+Immediately after endpoint reaches:
+
+START=$(date +%s%3N)
+
+aws sagemaker-runtime invoke-endpoint \
+  --endpoint-name my-endpoint \
+  --content-type application/json \
+  --body fileb://request.json \
+  response.json
+
+END=$(date +%s%3N)
+
+echo "Cold Start Latency: $((END-START)) ms"
+
+

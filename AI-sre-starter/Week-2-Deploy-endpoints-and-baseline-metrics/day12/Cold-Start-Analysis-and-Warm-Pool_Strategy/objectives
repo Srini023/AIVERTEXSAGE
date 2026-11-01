@@ -1,0 +1,19 @@
+Objectives
+Measure cold-start latency for:
+Vertex AI Endpoint
+SageMaker Endpoint
+Compare:
+First request latency (cold)
+Subsequent request latency (warm)
+Document findings.
+Recommend min-replica / warm-pool settings.
+
+
+Warm-Pool Decision Matrix
+Traffic Pattern	StrategyLow / Infrequent	Scale-to-zero (if supported)
+Business Hours Only	Scheduled warm-up
+Continuous Production	Min replicas = 2
+Latency-Sensitive API	Dedicated warm pool
+GPU Endpoints	Pre-warmed replicas
+
+

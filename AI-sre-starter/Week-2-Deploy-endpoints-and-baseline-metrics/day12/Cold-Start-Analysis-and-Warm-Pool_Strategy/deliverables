@@ -1,0 +1,33 @@
+monitoring/
+
+├── reports/
+│   └── cold_start_report.md
+│
+├── baselines/
+│   └── cold_start_baseline.json
+│
+└── grafana/
+    └── cold_start_dashboard.json
+
+
+Acceptance Criteria
+ Cold-start latency measured
+ Warm-request latency measured
+ Cold vs warm comparison documented
+ Vertex AI strategy recommended
+ SageMaker strategy recommended
+ Warm-up approach documented
+ Cold-start report saved
+ Grafana panels updated
+
+
+SRE Outcome
+Cold Start Characterized       YES
+Warm Pool Strategy Defined     YES
+Cost vs Latency Tradeoff Known YES
+Production Replica Guidance    READY
+Monitoring Updated             YES
+
+SRE Recommendation: For customer-facing inference APIs, start with min replicas = 2 (Vertex AI) and minimum 2 instances (SageMaker) to balance availability, rolling deployments, and cold-start avoidance. Use Day 10 baseline latency metrics and Day 12 cold-start measurements to justify autoscaling thresholds and capacity planning.
+
+

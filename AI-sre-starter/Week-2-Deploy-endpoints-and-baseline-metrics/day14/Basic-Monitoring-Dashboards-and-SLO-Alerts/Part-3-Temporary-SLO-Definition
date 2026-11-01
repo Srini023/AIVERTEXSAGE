@@ -1,0 +1,9 @@
+Example temporary SLO:
+
+Plain Text
+p99 Latency < 2000 ms
+
+Error budget:
+
+Plain Text
+Availability > 99%

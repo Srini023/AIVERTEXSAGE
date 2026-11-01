@@ -1,0 +1,20 @@
+log_entry = {
+
+    "event": "prediction",
+
+    "request_id": request_id,
+
+    "model_version": "v1.2.0",
+
+    "endpoint": "prod-endpoint",
+
+    "latency_ms": latency_ms,
+
+    "confidence": confidence,
+
+    "status": "success",
+
+    "timestamp": time.time()
+}
+
+logger.info(json.dumps(log_entry))

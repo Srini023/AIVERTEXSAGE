@@ -1,0 +1,15 @@
+SageMaker Recommendation
+Development
+
+Instance Count = 1
+
+Production
+Instance Count = 2+
+
+Benefits:
+
+High availability
+Fast failover
+Reduced startup impact
+
+

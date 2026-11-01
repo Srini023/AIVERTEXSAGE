@@ -1,0 +1,12 @@
+Add structured JSON logging to the model server.
+Capture:
+Request ID
+Endpoint name
+Request latency
+Prediction confidence
+Response status
+Build and push a new container image.
+Redeploy to:
+Vertex AI
+SageMaker
+Validate logs appear correctly in Cloud Logging and CloudWatch.

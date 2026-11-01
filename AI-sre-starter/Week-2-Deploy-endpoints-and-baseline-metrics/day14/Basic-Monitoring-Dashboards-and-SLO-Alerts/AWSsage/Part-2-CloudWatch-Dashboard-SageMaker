@@ -1,0 +1,85 @@
+Dashboard Layout
+
+SageMaker Endpoint
+
+┌─────────────────────┐
+│ Model Latency       │
+└─────────────────────┘
+
+┌─────────────────────┐
+│ 5XX Error Rate      │
+└─────────────────────┘
+
+Widget 1: Model Latency
+Metric:
+
+Plain Text
+AWS/SageMaker
+
+ModelLatency
+
+Statistic:
+p99
+
+Period:
+
+Plain Text
+60 seconds
+
+
+Widget 2: Error Rate
+Metrics:
+Invocation4XXErrors
+
+Invocation5XXErrors
+
+Statistic:
+Sum
+
+Visualization:
+Time Series
+
+CloudWatch Dashboard JSON
+monitoring/cloudwatch/dashboard.json
+
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "properties": {
+        "title": "P99 Latency",
+        "metrics": [
+          [
+            "AWS/SageMaker",
+            "ModelLatency",
+            "EndpointName",
+            "my-endpoint"
+          ]
+        ],
+        "stat": "p99",
+        "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "title": "5XX Errors",
+        "metrics": [
+          [
+            "AWS/SageMaker",
+            "Invocation5XXErrors",
+            "EndpointName",
+            "my-endpoint"
+          ]
+        ]
+      }
+    }
+  ]
+}
+
+Create:
+aws cloudwatch put-dashboard \
+  --dashboard-name "SageMaker-Endpoint" \
+  --dashboard-body file://monitoring/cloudwatch/dashboard.json
+
+

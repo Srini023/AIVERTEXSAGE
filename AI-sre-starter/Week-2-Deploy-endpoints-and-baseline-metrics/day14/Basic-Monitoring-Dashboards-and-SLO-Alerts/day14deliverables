@@ -1,0 +1,53 @@
+Dashboard Screenshots
+Dashboard Screenshots
+monitoring/
+
+├── cloud-monitoring/
+│   ├── dashboard.json
+│   └── dashboard.png
+
+├── cloudwatch/
+│   ├── dashboard.json
+│   └── dashboard.png
+
+
+monitoring/
+
+├── cloud-monitoring/
+│   ├── vertex-dashboard.json
+│   └── vertex-p99-alert.yaml
+
+├── cloudwatch/
+│   ├── dashboard.json
+│   └── p99-alarm.json
+
+└── reports/
+    └── slo_baseline.md
+
+Acceptance Criteria
+Dashboards
+ Vertex dashboard created
+ SageMaker dashboard created
+ Latency visible
+ Error rate visible
+Alerts
+ Vertex p99 alert configured
+ SageMaker p99 alarm configured
+ Threshold documented
+ Alarm tested
+Observability
+ Dashboards saved in repository
+ Screenshots archived
+ Monitoring folder updated
+
+
+SRE Outcome
+Latency Monitoring    ENABLED
+Error Monitoring      ENABLED
+P99 Alerting          ENABLED
+SLO Tracking          ENABLED
+Cross-Cloud Visibility READY
+
+SRE Recommendation: Keep the Day 14 threshold intentionally permissive (for example, p99 < 2000 ms). After collecting 1–2 weeks of production traffic, tighten the SLO to approximately 20–30% above the observed p99 baseline to reduce false positives while still detecting regressions.
+
+
